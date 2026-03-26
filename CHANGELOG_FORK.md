@@ -77,6 +77,16 @@ TTL 5 分钟过期，Map 超 50 条自动清理过期项。
 `store.ts` 的 `upsertChannelBinding` 更新时会重置 `sdkSessionId`。
 之前 `/new` 创建新 session 后，旧的 sdkSessionId 保留，导致 CLI 继续 resume 旧 session。
 
+#### 8. /update 远程更新
+
+`main.ts` 新增 `/update` 命令。流程：
+1. 备份当前 `dist/`
+2. `git pull` 拉取最新代码
+3. `npm install && npm run build`
+4. 成功 → `process.exit(0)` 重启，失败 → 恢复备份
+
+用法：在 IM 里发 `/update` 即可远程更新技能。
+
 ## 数据流
 
 ```

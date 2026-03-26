@@ -477,11 +477,81 @@ async function main(): Promise<void> {
           return `Failed to switch runtime: ${escapeHtml(msg)}`;
         }
       }
+
+      // ── /update: git pull + rebuild + restart ──
+      if (command === '/update') {
+        const { execSync } = await import('node:child_process');
+        const skillDir = path.resolve(new URL(import.meta.url).pathname, '..', '..', '..', '..');
+        const distDir = path.join(skillDir, 'dist');
+        const backupDir = path.join(skillDir, '.dist-backup');
+
+        if (!fs.existsSync(path.join(skillDir, '.git'))) {
+          return 'Skill is not installed via git. Use <code>npx skills add veniai/Claude-to-IM-skill</code> to reinstall.';
+        }
+
+        try {
+          // Backup current dist
+          if (fs.existsSync(distDir)) {
+            fs.rmSync(backupDir, { recursive: true, force: true });
+            fs.cpSync(distDir, backupDir, { recursive: true });
+          }
+
+          // git pull
+          const gitOut = execSync('git pull', {
+            cwd: skillDir,
+            timeout: 30000,
+            encoding: 'utf-8',
+          });
+
+          if (gitOut.trim() === 'Already up to date.') {
+            if (fs.existsSync(backupDir)) {
+              fs.rmSync(distDir, { recursive: true, force: true });
+              fs.cpSync(backupDir, distDir, { recursive: true });
+              fs.rmSync(backupDir, { recursive: true, force: true });
+            }
+            return 'Already up to date.';
+          }
+
+          // npm install
+          execSync('npm install', {
+            cwd: skillDir,
+            timeout: 60000,
+            encoding: 'utf-8',
+          });
+
+          // npm run build
+          execSync('npm run build', {
+            cwd: skillDir,
+            timeout: 30000,
+            encoding: 'utf-8',
+          });
+
+          // Cleanup backup
+          fs.rmSync(backupDir, { recursive: true, force: true });
+
+          // Exit process — gateway supervisor will restart
+          console.log('[claude-to-im] Update complete, restarting...');
+          setTimeout(() => process.exit(0), 500);
+          return 'Updating... will restart shortly.';
+
+        } catch (err) {
+          // Restore backup on failure
+          if (fs.existsSync(backupDir)) {
+            fs.rmSync(distDir, { recursive: true, force: true });
+            fs.cpSync(backupDir, distDir, { recursive: true });
+            fs.rmSync(backupDir, { recursive: true, force: true });
+          }
+          const msg = err instanceof Error ? err.message : String(err);
+          return `Update failed:\n<code>${escapeHtml(msg)}</code>\nPrevious version restored.`;
+        }
+      }
+
       return undefined;
     },
     extraHelpLines(): string[] {
       return [
         '/runtime claude|codex|auto - Switch LLM runtime',
+        '/update - Pull latest code, rebuild, restart',
       ];
     },
     async onMessage(text: string, chatId: string): Promise<string | undefined> {
