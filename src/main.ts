@@ -481,7 +481,7 @@ async function main(): Promise<void> {
       // ── /update: git pull + rebuild + restart ──
       if (command === '/update') {
         const { execSync } = await import('node:child_process');
-        const skillDir = path.resolve(new URL(import.meta.url).pathname, '..', '..', '..', '..');
+        const skillDir = path.resolve(new URL(import.meta.url).pathname, '..', '..');
         const distDir = path.join(skillDir, 'dist');
         const backupDir = path.join(skillDir, '.dist-backup');
 
