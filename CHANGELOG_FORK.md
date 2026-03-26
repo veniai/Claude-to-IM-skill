@@ -67,6 +67,16 @@ TTL 5 分钟过期，Map 超 50 条自动清理过期项。
 解析 JSONL session 文件，跳过系统消息（AGENTS.md、environment_context）
 和无意义消息（"你是什么模型？"等），取第一条有意义的用户消息作为预览。
 
+#### 6. autoApprove 默认开启
+
+`config.ts` 中 `CTI_AUTO_APPROVE` 默认为 true（pro 模式）。
+设 `CTI_AUTO_APPROVE=false` 可禁用。
+
+#### 7. /new 修复 sdkSessionId 未重置
+
+`store.ts` 的 `upsertChannelBinding` 更新时会重置 `sdkSessionId`。
+之前 `/new` 创建新 session 后，旧的 sdkSessionId 保留，导致 CLI 继续 resume 旧 session。
+
 ## 数据流
 
 ```
